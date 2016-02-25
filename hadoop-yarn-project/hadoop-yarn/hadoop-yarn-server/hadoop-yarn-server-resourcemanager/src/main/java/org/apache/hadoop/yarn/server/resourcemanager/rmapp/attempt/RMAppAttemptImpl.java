@@ -142,6 +142,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private String originalTrackingUrl = "N/A";//recovered
   private String proxiedTrackingUrl = "N/A";//recovered
   private long startTime = 0;//recovered
+  private long finishTime = 0;
 
   // Set to null initially. Will eventually get set 
   // if an RMAppAttemptUnregistrationEvent occurs
@@ -593,6 +594,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
     this.finalStatus = attemptState.getFinalApplicationStatus();
     this.startTime = attemptState.getStartTime();
+    this.finishTime = attemptState.getFinishTime();
     this.progress = attemptState.getProgress();
     this.host = attemptState.getHost();
     this.rpcPort = attemptState.getRpcPort();
@@ -1382,5 +1384,24 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           clientTokenMasterKey.getEncoded());
     }
     return credentials;
+  }
+
+  @Override
+  public long getFinishTime() {
+    try {
+      this.readLock.lock();
+      return this.finishTime;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  private void setFinishTime(long finishTime) {
+    try {
+      this.writeLock.lock();
+      this.finishTime = finishTime;
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 }

@@ -405,6 +405,7 @@ public class TransactionStateImpl extends TransactionState {
                     getState(), appAttempt.getOriginalTrackingUrl(),
                     appAttempt.getDiagnostics(),
                     appAttempt.getFinalApplicationStatus(),
+                    appAttempt.getFinishTime(),
                     appAttempt.getAMContainerExitStatus(),
                     new HashSet<NodeId>(),
                     new ArrayList<ContainerStatus>(),

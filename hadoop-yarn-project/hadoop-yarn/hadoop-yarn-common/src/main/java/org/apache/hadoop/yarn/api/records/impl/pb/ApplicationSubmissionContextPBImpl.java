@@ -405,4 +405,17 @@ public class ApplicationSubmissionContextPBImpl
   private ResourceProto convertToProtoFormat(Resource t) {
     return ((ResourcePBImpl) t).getProto();
   }
+
+  @Override
+  public long getAttemptFailuresValidityInterval() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getAttemptFailuresValidityInterval();
+  }
+
+  @Override
+  public void setAttemptFailuresValidityInterval(
+      long attemptFailuresValidityInterval) {
+    maybeInitBuilder();
+    builder.setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
+  }
 }  

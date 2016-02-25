@@ -155,7 +155,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
     Set<NodeId> ranNodes;
     List<org.apache.hadoop.yarn.api.records.ContainerStatus>
         justFinishedContainers;
-
+    long finishTime = 0;
     // fields set when attempt completes
     RMAppAttemptState state;
     String finalTrackingUrl = "N/A";
@@ -167,14 +167,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
         org.apache.hadoop.yarn.api.records.Container masterContainer,
         Credentials appAttemptCredentials, long startTime) {
       this(attemptId, masterContainer, appAttemptCredentials, startTime, null,
-          null, "", null, ContainerExitStatus.INVALID, 0, "N/A", -1, null, null);
+          null, "", null, ContainerExitStatus.INVALID, 0, 0, "N/A", -1, null, null);
     }
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         org.apache.hadoop.yarn.api.records.Container masterContainer,
         Credentials appAttemptCredentials, long startTime,
         RMAppAttemptState state, String finalTrackingUrl, String diagnostics,
-        FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus, float progress,
+        FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
+        long finishTime, float progress,
         String host, int rpcPort, Set<NodeId> ranNodes,
         List<org.apache.hadoop.yarn.api.records.ContainerStatus> justFinishedContainers) {
       this.attemptId = attemptId;
@@ -187,6 +188,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
       this.diagnostics = diagnostics == null ? "" : diagnostics;
       this.amUnregisteredFinalStatus = amUnregisteredFinalStatus;
       this.exitStatus = exitStatus;
+      this.finishTime = finishTime;
       this.host = host;
       this.rpcPort = rpcPort;
       this.ranNodes = ranNodes;
@@ -250,6 +252,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 
     public int getAMContainerExitStatus(){
       return this.exitStatus;
+    }
+    public long getFinishTime() {
+      return this.finishTime;
     }
   }
 
@@ -1341,6 +1346,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
                         attemptState.getFinalTrackingUrl(),
                         attemptState.getDiagnostics(),
                         attemptState.getFinalApplicationStatus(),
+                        attemptState.getFinishTime(),
                         attemptState.getAMContainerExitStatus(),
                         attemptState.getRanNodes(),
                         attemptState.getJustFinishedContainers(),

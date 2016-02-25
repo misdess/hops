@@ -149,6 +149,7 @@ public class MemoryRMStateStore extends RMStateStore {
             attemptStateData.getDiagnostics(),
             attemptStateData.getFinalApplicationStatus(),
             attemptStateData.getAMContainerExitStatus(),
+            attemptStateData.getFinishTime(),
             attemptStateData.getProgress(), attemptStateData.getHost(),
             attemptStateData.getRpcPort(), attemptStateData.getRanNodes(),
             attemptStateData.getJustFinishedContainers());

@@ -20,10 +20,10 @@ import io.hops.ha.common.TransactionState;
 import io.hops.ha.common.TransactionStateImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -67,6 +67,10 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.SystemClock;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -109,6 +113,12 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final Set<RMNode> updatedNodes = new HashSet<RMNode>();//recovered
   private final String applicationType; //recovered
   private final Set<String> applicationTags;//recovered
+  
+  private final long attemptFailuresValidityInterval;
+
+  private Clock systemClock;
+
+  private boolean isNumAttemptsBeyondThreshold = false;
 
   // Mutable fields
   private long startTime;//recovered
@@ -239,6 +249,8 @@ public class RMAppImpl implements RMApp, Recoverable {
       String applicationType, Set<String> applicationTags,
       TransactionState transactionState) {
 
+    this.systemClock = new SystemClock();
+    
     this.applicationId = applicationId;
     this.name = name;
     this.rmContext = rmContext;
@@ -251,7 +263,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.scheduler = scheduler;
     this.masterService = masterService;
     this.submitTime = submitTime;
-    this.startTime = System.currentTimeMillis();
+    this.startTime = this.systemClock.getTime();
     this.applicationType = applicationType;
     this.applicationTags = applicationTags;
 
@@ -268,6 +280,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     } else {
       this.maxAppAttempts = individualMaxAppAttempts;
     }
+    
+    this.attemptFailuresValidityInterval =
+        submissionContext.getAttemptFailuresValidityInterval();
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -724,7 +739,6 @@ public class RMAppImpl implements RMApp, Recoverable {
         if (((RMAppNewSavedEvent) event).getStoredException() != null) {
           LOG.error("Failed to store application: " + storeEvent.
                   getApplicationId(), storeEvent.getStoredException());
-          ExitUtil.terminate(1, storeEvent.getStoredException());
         }
       }
       app.handler.handle(new AppAddedSchedulerEvent(app.applicationId,
@@ -752,7 +766,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       msg = "Unmanaged application " + this.getApplicationId() +
           " failed due to " + failedEvent.getDiagnostics() +
           ". Failing the application.";
-    } else if (getNumNonPreemptedAppAttempts() >= this.maxAppAttempts) {
+    } else if (this.isNumAttemptsBeyondThreshold) {
       msg = "Application " + this.getApplicationId() + " failed " +
           this.maxAppAttempts + " times due to " +
           failedEvent.getDiagnostics() + ". Failing the application.";
@@ -882,7 +896,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
       app.finishTime = app.storedFinishTime;
       if (app.finishTime == 0) {
-        app.finishTime = System.currentTimeMillis();
+        app.finishTime = app.systemClock.getTime();
       }
       app.handler.handle(
           new AppRemovedSchedulerEvent(app.applicationId, finalState,
@@ -901,10 +915,15 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   private int getNumNonPreemptedAppAttempts() {
     int completedAttempts = 0;
+    long endTime = this.systemClock.getTime();
     // Do not count AM preemption as attempt failure.
     for (RMAppAttempt attempt : attempts.values()) {
       if (!attempt.isPreempted()) {
-        completedAttempts++;
+       if (this.attemptFailuresValidityInterval <= 0
+            || (attempt.getFinishTime() > endTime
+                - this.attemptFailuresValidityInterval)) {
+          completedAttempts++;
+        }
       }
     }
     return completedAttempts;
@@ -923,8 +942,9 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
+        int numberOfFailure = app.getNumNonPreemptedAppAttempts();
       if (!app.submissionContext.getUnmanagedAM() &&
-          app.getNumNonPreemptedAppAttempts() < app.maxAppAttempts) {
+          numberOfFailure < app.maxAppAttempts) {
         boolean transferStateFromPreviousAttempt;
         RMAppFailedAttemptEvent failedEvent = (RMAppFailedAttemptEvent) event;
         transferStateFromPreviousAttempt =
@@ -944,6 +964,9 @@ public class RMAppImpl implements RMApp, Recoverable {
         }
         return initialState;
       } else {
+        if (numberOfFailure >= app.maxAppAttempts) {
+          app.isNumAttemptsBeyondThreshold = true;
+        }
 
         String msg = app.getAppAttemptFailedDiagnostics(event);
 
@@ -1008,4 +1031,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     return updatedNodesId;
   }
 
+  @Private
+  @VisibleForTesting
+  public void setSystemClock(Clock clock) {
+    this.systemClock = clock;
+  }
 }

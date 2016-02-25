@@ -123,7 +123,14 @@ public interface ApplicationAttemptStateData {
   
   public int getAMContainerExitStatus();
 
-  public void setAMContainerExitStatus(int exitStatus);
+  public void setAMContainerExitStatus(int exitStatus);  
+   /**
+   * Get the <em>finish time</em> of the application attempt.
+   * @return <em>finish time</em> of the application attempt
+   */
+  public abstract long getFinishTime();
+
+  public abstract void setFinishTime(long finishTime);
   /**
    * Get the <em>Progress</em> of the application.
    *

@@ -336,7 +336,8 @@ public class ApplicationAttemptStateDataPBImpl
       ApplicationAttemptId attemptId, Container container,
       ByteBuffer attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
-      FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus, Set<NodeId> ranNodes,
+      FinalApplicationStatus amUnregisteredFinalStatus, long finishTime,
+      int exitStatus, Set<NodeId> ranNodes,
       List<ContainerStatus> justFinishedContainers, float progress, String host,
       int rpcPort) {
     ApplicationAttemptStateData attemptStateData =
@@ -350,6 +351,7 @@ public class ApplicationAttemptStateDataPBImpl
     attemptStateData.setStartTime(startTime);
     attemptStateData.setFinalApplicationStatus(amUnregisteredFinalStatus);
     attemptStateData.setAMContainerExitStatus(exitStatus);
+    attemptStateData.setFinishTime(finishTime);
     attemptStateData.setProgress(progress);
     attemptStateData.setHost(host);
     attemptStateData.setRpcPort(rpcPort);
@@ -417,4 +419,16 @@ public class ApplicationAttemptStateDataPBImpl
     maybeInitBuilder();
     builder.setAmContainerExitStatus(exitStatus);
   }
+
+  @Override
+  public long getFinishTime() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getFinishTime();
+  }
+
+  @Override
+  public void setFinishTime(long finishTime) {
+    maybeInitBuilder();
+    builder.setFinishTime(finishTime);
+  } 
 }

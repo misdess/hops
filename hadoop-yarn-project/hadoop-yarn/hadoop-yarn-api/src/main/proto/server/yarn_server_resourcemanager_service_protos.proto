@@ -149,6 +149,7 @@ message ApplicationAttemptStateDataProto {
   repeated NodeIdProto ran_nodes = 13;
   repeated ContainerStatusProto just_finished_fontainers = 14;
   optional AllocateResponseProto allocate_response = 15;
+  optional int64 finish_time = 16;
 }
 
 message RMStateVersionProto {

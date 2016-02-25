@@ -224,6 +224,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
                     attemptStateData.getDiagnostics(),
                     attemptStateData.getFinalApplicationStatus(),
                     attemptStateData.getAMContainerExitStatus(),
+                    attemptStateData.getFinishTime(),
                     attemptStateData.getProgress(), attemptStateData.getHost(),
                     attemptStateData.getRpcPort(),
                     attemptStateData.getRanNodes(),

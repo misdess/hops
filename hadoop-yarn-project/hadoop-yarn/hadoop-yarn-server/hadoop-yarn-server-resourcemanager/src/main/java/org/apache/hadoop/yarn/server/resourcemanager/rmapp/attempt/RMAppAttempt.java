@@ -254,4 +254,10 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   public int getAMContainerExitStatus();
 
   public Credentials getCredentials();
+  
+  /**
+   * the finish time of the application attempt.
+   * @return the finish time of the application attempt.
+   */
+  long getFinishTime();
 }
